@@ -1,0 +1,10 @@
+<script>
+  const repo = "SOCR-qi";
+  const l = window.location;
+  l.replace(
+    l.protocol + "//" + l.hostname + (l.port ? ":" + l.port : "") +
+    "/" + repo + "/?p=" + l.pathname.slice(repo.length + 1) +
+    (l.search ? "&q=" + l.search.slice(1) : "") +
+    l.hash
+  );
+</script>
