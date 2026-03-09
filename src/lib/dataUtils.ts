@@ -1,4 +1,5 @@
 
+import { isValid } from "date-fns";
 import { DataPoint, TimeSeriesData, SimulationOptions, ImportOptions } from "./types";
 
 // Parse CSV data into our TimeSeriesData format
@@ -12,6 +13,17 @@ export const parseCSVData = (csvContent: string, options: ImportOptions): TimeSe
   }
 };
 
+// validates date
+const isValidDate = (value: string): boolean => {
+  // reject pure numbers like "1", "100", etc
+  if (/^\d+$/.test(value.trim())) {
+    return false;
+  }
+  
+  const date = new Date(value);
+  return !isNaN(date.getTime());
+};
+
 // Detects the most likely timestamp column from headers or first row values
 const detectTimestampColumn = (headers: string[], firstRowValues: string[]): number => {
   // Common timestamp column names
@@ -21,7 +33,8 @@ const detectTimestampColumn = (headers: string[], firstRowValues: string[]): num
   for (let i = 0; i < headers.length; i++) {
     const header = headers[i].toLowerCase();
     if (timeColumnNames.some(name => header.includes(name))) {
-      return i;
+      // actually validate the values
+      if(isValidDate(firstRowValues[i])) return i;
     }
   }
   
@@ -41,9 +54,12 @@ const detectTimestampColumn = (headers: string[], firstRowValues: string[]): num
       return i;
     }
   }
-  
-  // Default to first column if no timestamp column is detected
-  return 0;
+
+  // check if first column actually contains valid dates
+  if(isValidDate(firstRowValues[0])) return 0;
+
+  // otherwise
+  throw new Error("No valid timestamp column detected. Dataset must contain a date/time column.");
 };
 
 // Parse wide format CSV with automatic timestamp column detection
@@ -417,6 +433,10 @@ export const groupBySeriesId = (data: TimeSeriesData): Record<string, DataPoint[
 // Format date for display
 export const formatDate = (dateString: string): string => {
   const date = new Date(dateString);
+
+  // prevent crashes for invalid timestamps
+  if(isNaN(date.getTime())) return dateString;
+
   return new Intl.DateTimeFormat('en-US', { 
     year: 'numeric', 
     month: 'short', 
